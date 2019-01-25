@@ -1,23 +1,22 @@
 'use strict';
 
-var bdd = require('../helpers/bdd-if');
-var should = require('should');
-var helpers = require('./_helpers');
-var Promise = require('bluebird');
+const bdd = require('../helpers/bdd-if');
+const should = require('should');
+const helpers = require('./_helpers');
 
 module.exports = function(dataSourceFactory, connectorCapabilities) {
-  var TTL_PRECISION = connectorCapabilities.ttlPrecision;
+  const TTL_PRECISION = connectorCapabilities.ttlPrecision;
 
   // Use ~1s for stores with precision of 1 ms,
   // about 3s for stores with precision of 1s.
-  var INITIAL_TTL = Math.max(TTL_PRECISION + 1000, TTL_PRECISION * 3);
+  const INITIAL_TTL = Math.max(TTL_PRECISION + 1000, TTL_PRECISION * 3);
 
   // A small delay to allow the backend to process the request, run any
   // TTL/expire checks, etc. Use 1ms for backends supporting sub-10ms
   // resolution to ensure the delay is not too short..
-  var SMALL_DELAY = Math.max(1, Math.floor(TTL_PRECISION / 10));
+  const SMALL_DELAY = Math.max(1, Math.floor(TTL_PRECISION / 10));
 
-  var canQueryTtl = connectorCapabilities.canQueryTtl !== false;
+  const canQueryTtl = connectorCapabilities.canQueryTtl !== false;
 
   bdd.describeIf(canQueryTtl, 'ttl', function() {
     let CacheItem;
@@ -28,7 +27,7 @@ module.exports = function(dataSourceFactory, connectorCapabilities) {
         return Promise.resolve(
           CacheItem.set('a-key', 'a-value', {ttl: INITIAL_TTL})
         )
-          .delay(SMALL_DELAY)
+          .then(() => helpers.delay(SMALL_DELAY))
           .then(function() { return CacheItem.ttl('a-key'); })
           .then(function(ttl) { ttl.should.be.within(1, INITIAL_TTL); });
       });
@@ -55,7 +54,7 @@ module.exports = function(dataSourceFactory, connectorCapabilities) {
       return Promise.resolve(
         CacheItem.set('expired-key', 'a-value', {ttl: TTL_PRECISION})
       )
-        .delay(2 * TTL_PRECISION)
+        .then(() => helpers.delay(2 * TTL_PRECISION))
         .then(function() {
           return CacheItem.ttl('expired-key');
         })
